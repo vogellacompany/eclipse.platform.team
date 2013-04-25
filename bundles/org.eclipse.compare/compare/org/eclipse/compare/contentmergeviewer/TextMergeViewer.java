@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2010 IBM Corporation and others.
+ * Copyright (c) 2000, 2013 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -38,12 +38,15 @@ import org.eclipse.compare.IStreamContentAccessor;
 import org.eclipse.compare.ITypedElement;
 import org.eclipse.compare.SharedDocumentAdapter;
 import org.eclipse.compare.internal.BufferedCanvas;
+import org.eclipse.compare.internal.ChangeCompareFilterPropertyAction;
 import org.eclipse.compare.internal.ChangePropertyAction;
 import org.eclipse.compare.internal.CompareEditor;
+import org.eclipse.compare.internal.CompareEditorContributor;
 import org.eclipse.compare.internal.CompareEditorSelectionProvider;
 import org.eclipse.compare.internal.CompareHandlerService;
 import org.eclipse.compare.internal.CompareMessages;
 import org.eclipse.compare.internal.ComparePreferencePage;
+import org.eclipse.compare.internal.CompareFilterDescriptor;
 import org.eclipse.compare.internal.CompareUIPlugin;
 import org.eclipse.compare.internal.DocumentManager;
 import org.eclipse.compare.internal.ICompareContextIds;
@@ -424,6 +427,7 @@ public class TextMergeViewer extends ContentMergeViewer implements IAdaptable {
 	private TextEditorPropertyAction toggleLineNumbersAction;
 	private IFindReplaceTarget fFindReplaceTarget;
 	private ChangePropertyAction fIgnoreWhitespace;
+	private List fCompareFilterActions = new ArrayList();
 	private DocumentMerger fMerger;
 	/** The current diff */
 	private Diff fCurrentDiff;
@@ -1850,7 +1854,12 @@ public class TextMergeViewer extends ContentMergeViewer implements IAdaptable {
 		
 		if (fIgnoreWhitespace != null)
 			fIgnoreWhitespace.dispose();
-		
+
+		getCompareConfiguration().setProperty(
+				ChangeCompareFilterPropertyAction.COMPARE_FILTERS_INITIALIZING,
+				Boolean.TRUE);
+		disposeCompareFilterActions(false);
+
 		if (fSourceViewerDecorationSupport != null) {
 			for (Iterator iterator = fSourceViewerDecorationSupport.iterator(); iterator.hasNext();) {
 				((SourceViewerDecorationSupport) iterator.next()).dispose();
@@ -2746,6 +2755,8 @@ public class TextMergeViewer extends ContentMergeViewer implements IAdaptable {
 		boolean emptyInput= (ancestor == null && left == null && right == null);
 
 		Object input= getInput();
+
+		configureCompareFilterActions(input, ancestor, left, right);
 
 		Position leftRange= null;
 		Position rightRange= null;
@@ -3668,6 +3679,140 @@ public class TextMergeViewer extends ContentMergeViewer implements IAdaptable {
 		fHandlerService.registerAction(toggleLineNumbersAction, ITextEditorActionDefinitionIds.LINENUMBER_TOGGLE);
 	}
 	
+	private void configureCompareFilterActions(Object input, Object ancestor,
+			Object left, Object right) {
+		if (getCompareConfiguration() != null) {
+			CompareFilterDescriptor[] compareFilterDescriptors = CompareUIPlugin
+					.getDefault().findCompareFilters(input);
+
+			Object current = getCompareConfiguration().getProperty(
+					ChangeCompareFilterPropertyAction.COMPARE_FILTER_ACTIONS);
+			boolean currentFiltersMatch = false;
+			if (current != null
+					&& current instanceof List
+					&& ((List) current).size() == compareFilterDescriptors.length) {
+				currentFiltersMatch = true;
+				List currentFilterActions = (List) current;
+				for (int i = 0; i < compareFilterDescriptors.length; i++) {
+					boolean match = false;
+					for (int j = 0; j < currentFilterActions.size(); j++) {
+						if (compareFilterDescriptors[i]
+								.getFilterId()
+								.equals(((ChangeCompareFilterPropertyAction) currentFilterActions
+										.get(j)).getFilterId())) {
+							match = true;
+							break;
+						}
+					}
+					if (!match) {
+						currentFiltersMatch = false;
+						break;
+					}
+				}
+			}
+
+			if (!currentFiltersMatch) {
+				getCompareConfiguration()
+						.setProperty(
+								ChangeCompareFilterPropertyAction.COMPARE_FILTERS_INITIALIZING,
+								Boolean.TRUE);
+				disposeCompareFilterActions(true);
+				fCompareFilterActions.clear();
+				for (int i = 0; i < compareFilterDescriptors.length; i++) {
+					ChangeCompareFilterPropertyAction compareFilterAction = new ChangeCompareFilterPropertyAction(
+							compareFilterDescriptors[i],
+							getCompareConfiguration());
+					compareFilterAction.setInput(input, ancestor, left, right);
+					fCompareFilterActions.add(compareFilterAction);
+					fLeft.addTextAction(compareFilterAction);
+					fRight.addTextAction(compareFilterAction);
+					fAncestor.addTextAction(compareFilterAction);
+
+					if (getCompareConfiguration().getContainer()
+							.getActionBars() != null) {
+						getCompareConfiguration()
+								.getContainer()
+								.getActionBars()
+								.getToolBarManager()
+								.appendToGroup(
+										CompareEditorContributor.FILTER_SEPARATOR,
+										compareFilterAction);
+						if (compareFilterAction.getActionDefinitionId() != null)
+							getCompareConfiguration()
+									.getContainer()
+									.getActionBars()
+									.setGlobalActionHandler(
+											compareFilterAction
+													.getActionDefinitionId(),
+											compareFilterAction);
+					}
+				}
+				if (!fCompareFilterActions.isEmpty()
+						&& getCompareConfiguration().getContainer()
+								.getActionBars() != null) {
+					getCompareConfiguration().getContainer().getActionBars()
+							.getToolBarManager().markDirty();
+					getCompareConfiguration().getContainer().getActionBars()
+							.getToolBarManager().update(true);
+					getCompareConfiguration().getContainer().getActionBars()
+							.updateActionBars();
+				}
+				getCompareConfiguration()
+						.setProperty(
+								ChangeCompareFilterPropertyAction.COMPARE_FILTER_ACTIONS,
+								fCompareFilterActions);
+				getCompareConfiguration()
+						.setProperty(
+								ChangeCompareFilterPropertyAction.COMPARE_FILTERS_INITIALIZING,
+								null);
+			} else {
+				for (int i = 0; i < fCompareFilterActions.size(); i++) {
+					((ChangeCompareFilterPropertyAction) fCompareFilterActions
+							.get(i)).setInput(input, ancestor, left, right);
+				}
+			}
+		}
+	}
+
+	private void disposeCompareFilterActions(boolean updateActionBars) {
+		Iterator compareFilterActionsIterator = fCompareFilterActions
+				.iterator();
+		while (compareFilterActionsIterator.hasNext()) {
+			ChangeCompareFilterPropertyAction compareFilterAction = (ChangeCompareFilterPropertyAction) compareFilterActionsIterator
+					.next();
+			fLeft.removeTextAction(compareFilterAction);
+			fRight.removeTextAction(compareFilterAction);
+			fAncestor.removeTextAction(compareFilterAction);
+			if (updateActionBars
+					&& getCompareConfiguration().getContainer().getActionBars() != null) {
+				getCompareConfiguration().getContainer().getActionBars()
+						.getToolBarManager()
+						.remove(compareFilterAction.getId());
+				if (compareFilterAction.getActionDefinitionId() != null)
+					getCompareConfiguration()
+							.getContainer()
+							.getActionBars()
+							.setGlobalActionHandler(
+									compareFilterAction.getActionDefinitionId(),
+									null);
+			}
+			compareFilterAction.dispose();
+		}
+		if (updateActionBars
+				&& !fCompareFilterActions.isEmpty()
+				&& getCompareConfiguration().getContainer().getActionBars() != null) {
+			getCompareConfiguration().getContainer().getActionBars()
+					.getToolBarManager().markDirty();
+			getCompareConfiguration().getContainer().getActionBars()
+					.getToolBarManager().update(true);
+		}
+		fCompareFilterActions.clear();
+		getCompareConfiguration().setProperty(
+				ChangeCompareFilterPropertyAction.COMPARE_FILTERS, null);
+		getCompareConfiguration().setProperty(
+				ChangeCompareFilterPropertyAction.COMPARE_FILTER_ACTIONS, null);
+	}
+
 	/* (non-Javadoc)
 	 * @see org.eclipse.compare.contentmergeviewer.ContentMergeViewer#handlePropertyChangeEvent(org.eclipse.jface.util.PropertyChangeEvent)
 	 */
@@ -3675,7 +3820,10 @@ public class TextMergeViewer extends ContentMergeViewer implements IAdaptable {
 		String key= event.getProperty();
 		
 		if (key.equals(CompareConfiguration.IGNORE_WHITESPACE)
-				|| key.equals(ComparePreferencePage.SHOW_PSEUDO_CONFLICTS)) {
+				|| key.equals(ComparePreferencePage.SHOW_PSEUDO_CONFLICTS)
+				|| (key.equals(ChangeCompareFilterPropertyAction.COMPARE_FILTERS) && getCompareConfiguration()
+						.getProperty(
+								ChangeCompareFilterPropertyAction.COMPARE_FILTERS_INITIALIZING) == null)) {
 					
 			fShowPseudoConflicts= fPreferenceStore.getBoolean(ComparePreferencePage.SHOW_PSEUDO_CONFLICTS);
 			
@@ -4919,6 +5067,10 @@ public class TextMergeViewer extends ContentMergeViewer implements IAdaptable {
 						return fAncestor.getSourceViewer().getDocument();
 					}
 					return null;
+				}
+
+				public int getChangesCount() {
+					return fMerger.changesCount();
 				}
 			};
 		}

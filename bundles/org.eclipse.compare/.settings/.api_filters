@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?><component id="org.eclipse.compare" version="2">
+    <resource path="META-INF/MANIFEST.MF">
+        <filter comment="Client cannot implement ICompareFilter. This is an interface for org.eclipse.compare.compareFilters extension point which is internal." id="924844039">
+            <message_arguments>
+                <message_argument value="3.5.302"/>
+                <message_argument value="3.5.300"/>
+            </message_arguments>
+        </filter>
+    </resource>
+</component>
