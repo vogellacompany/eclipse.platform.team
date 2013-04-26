@@ -19,6 +19,6 @@
   </parent>
   <groupId>org.eclipse.compare</groupId>
   <artifactId>org.eclipse.compare.tests</artifactId>
-  <version>3.5.300-SNAPSHOT</version>
+  <version>3.5.302-SNAPSHOT</version>
   <packaging>eclipse-test-plugin</packaging>
 </project>
