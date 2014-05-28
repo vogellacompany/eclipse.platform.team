@@ -1,0 +1,10 @@
+Native Build Info:
+------------------
+
+platform:         linux.gtk.ia64
+built by:         Sravan Kumar Lakkimsetti, sravankumarl@in.ibm.com
+build date:       14-May-2014
+OS Name:          Inspur K-UX 2.1
+OS Version:       Linux 2.6.28.10-vs2.1
+Compiler version: gcc (GCC) 4.1.2 20080704 (Inspur 4.1.2-44)
+Java version:     Java(TM) 2 Runtime Environment, Standard Edition (IBM build 1.6.0_71-b1202 11_Apr_2014_00_08 linux ia64 (SR16))
