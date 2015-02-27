@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2006, 2011 IBM Corporation and others.
+ * Copyright (c) 2006, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -340,33 +340,45 @@ public class GenericHistoryView extends PageBookView implements IHistoryView, IP
 
 	private ISelectionListener selectionListener = new ISelectionListener() {
 
+		private boolean isUpdatingSelection= false;
+
 		public void selectionChanged(IWorkbenchPart part, ISelection selection) {
+			if (isUpdatingSelection)
+				return;
 
-			if (selection instanceof IStructuredSelection) {
-				IStructuredSelection structSelection = (IStructuredSelection) selection;
-				//Always take the first element - this is not intended to work with multiple selection
-				//Also, hang on to this selection for future use in case the history view is not visible
-				lastSelectedElement = structSelection.getFirstElement();
-
-				if (!isLinkingEnabled() || !checkIfPageIsVisible()) {
+			try {
+				isUpdatingSelection = true;
+				if (GenericHistoryView.this == part)
 					return;
-				}
 
-				if (lastSelectedElement != null){
-					Object resource;
-					if (lastSelectedElement instanceof SyncInfoModelElement) {
-						SyncInfoModelElement syncInfoModelElement = (SyncInfoModelElement) lastSelectedElement;
-						resource = syncInfoModelElement.getSyncInfo().getLocal();
-					} else {
-						resource = Utils.getAdapter(lastSelectedElement, IResource.class);
+				if (selection instanceof IStructuredSelection) {
+					IStructuredSelection structSelection= (IStructuredSelection)selection;
+					//Always take the first element - this is not intended to work with multiple selection
+					//Also, hang on to this selection for future use in case the history view is not visible
+					lastSelectedElement= structSelection.getFirstElement();
+
+					if (!isLinkingEnabled() || !checkIfPageIsVisible()) {
+						return;
 					}
-					if (resource != null)
-						showHistory(resource);
-					else
-						showHistory(lastSelectedElement);
-					//reset lastSelectedElement
-					lastSelectedElement = null;
+
+					if (lastSelectedElement != null) {
+						Object resource;
+						if (lastSelectedElement instanceof SyncInfoModelElement) {
+							SyncInfoModelElement syncInfoModelElement= (SyncInfoModelElement)lastSelectedElement;
+							resource= syncInfoModelElement.getSyncInfo().getLocal();
+						} else {
+							resource= Utils.getAdapter(lastSelectedElement, IResource.class);
+						}
+						if (resource != null)
+							showHistory(resource);
+						else
+							showHistory(lastSelectedElement);
+						//reset lastSelectedElement
+						lastSelectedElement= null;
+					}
 				}
+			} finally {
+				isUpdatingSelection= false;
 			}
 		}
 
