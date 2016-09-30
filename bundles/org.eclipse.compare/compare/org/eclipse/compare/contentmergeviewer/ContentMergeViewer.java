@@ -1460,9 +1460,9 @@ public abstract class ContentMergeViewer extends ContentViewer
 	}
 
 	/**
-	 * If the inputs are mirrored, this asks the right model value.
+	 * If the inputs are mirrored, this asks the left model value.
 	 * 
-	 * @return true if the left viewer is editable.
+	 * @return true if the right viewer is editable.
 	 * @since 3.7
 	 */
 	protected boolean isRightEditable() {
