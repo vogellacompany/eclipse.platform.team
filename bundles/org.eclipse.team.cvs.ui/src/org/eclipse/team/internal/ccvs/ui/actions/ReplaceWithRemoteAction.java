@@ -15,7 +15,6 @@ import java.lang.reflect.InvocationTargetException;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.team.internal.ccvs.core.CVSTag;
 import org.eclipse.team.internal.ccvs.ui.CVSUIMessages;
 import org.eclipse.team.internal.ccvs.ui.IHelpContextIds;
 import org.eclipse.team.internal.ccvs.ui.operations.ReplaceOperation;
@@ -23,8 +22,7 @@ import org.eclipse.team.internal.ccvs.ui.operations.ReplaceOperation;
 public class ReplaceWithRemoteAction extends WorkspaceTraversalAction {
     
 	public void execute(IAction action)  throws InvocationTargetException, InterruptedException {
-		// Using CVSTag.BASE similar to ReplaceWithLatestRevisionAction
-		final ReplaceOperation replaceOperation = new ReplaceOperation(getTargetPart(), getCVSResourceMappings(), CVSTag.BASE);
+		final ReplaceOperation replaceOperation = new ReplaceOperation(getTargetPart(), getCVSResourceMappings(), resourceCommonTag);
 		if (hasOutgoingChanges(replaceOperation)) {
 			final boolean[] keepGoing = new boolean[] { true };
 			Display.getDefault().syncExec(new Runnable() {
