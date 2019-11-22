@@ -2034,6 +2034,7 @@ public class TextMergeViewer extends ContentMergeViewer implements IAdaptable {
 			public void getName(AccessibleEvent e) {
 				// Check for Mirrored status flag before returning the left label's text.
 				e.result = NLS.bind(CompareMessages.TextMergeViewer_accessible_left,
+						getControl().getData(CompareUI.COMPARE_VIEWER_TITLE),
 						getCompareConfiguration().isMirrored() ? getCompareConfiguration().getRightLabel(getInput())
 								: getCompareConfiguration().getLeftLabel(getInput()));
 			}
@@ -2047,6 +2048,7 @@ public class TextMergeViewer extends ContentMergeViewer implements IAdaptable {
 			public void getName(AccessibleEvent e) {
 				// Check for Mirrored status flag before returning the right label's text.
 				e.result = NLS.bind(CompareMessages.TextMergeViewer_accessible_right,
+						getControl().getData(CompareUI.COMPARE_VIEWER_TITLE),
 						getCompareConfiguration().isMirrored() ? getCompareConfiguration().getLeftLabel(getInput())
 								: getCompareConfiguration().getRightLabel(getInput()));
 			}
